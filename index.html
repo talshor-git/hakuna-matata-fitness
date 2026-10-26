@@ -200,6 +200,35 @@ body.kb .nav{opacity:0;visibility:hidden;pointer-events:none;transform:translate
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes glow{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
 @keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+/* ---------- liquid glass material ---------- */
+/* Controls sit on opaque cards, so blur would show nothing — glass here is read through
+   light: a lit top edge, a shaded bottom, and a soft drop. Cheap, and it scales to any count. */
+.btn,.btn-ghost,.chip,.icon-btn,.dashed,.pick,.streak-pill,.stepper button,.set input,.setno,.tag,.day .c,.wbadge,.mbadge,.plus{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 62%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 0 rgba(46,31,22,.06),0 1px 3px rgba(46,31,22,.07)}
+.btn-pink,.btn-ink,.chip.on{background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 58%)}
+.btn-pink{box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -2px 8px rgba(120,15,50,.3),0 6px 16px rgba(200,50,95,.3)}
+.btn-ink{box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 8px rgba(0,0,0,.35),0 6px 16px rgba(46,31,22,.24)}
+.btn-ghost{background-image:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,.12) 62%);box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 3px rgba(46,31,22,.06)}
+.chip.on{box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(0,0,0,.28),0 2px 6px rgba(46,31,22,.2)}
+.streak-pill{box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(46,31,22,.07),0 4px 14px rgba(46,31,22,.12)}
+.icon-btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(46,31,22,.05),0 1px 3px rgba(46,31,22,.06)}
+.dashed{box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+.set input{box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(46,31,22,.05)}
+.set input:focus{box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 0 0 2px var(--pink)}
+/* Panels that float above a scrim get the same rim, without paying for a blur */
+.sheet{background-image:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 26%);box-shadow:0 -12px 44px rgba(46,31,22,.28),inset 0 1px 0 rgba(255,255,255,.95)}
+.celeb .box{background-image:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0) 34%);box-shadow:0 24px 70px rgba(46,31,22,.45),inset 0 1px 0 rgba(255,255,255,.95)}
+/* True frosted glass — only where something actually passes behind it */
+.toast{background:rgba(46,31,22,.78);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 30px rgba(46,31,22,.28),inset 0 1px 0 rgba(255,255,255,.2)}
+.overlay{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+@supports not (backdrop-filter:blur(1px)){
+  .toast{background:rgba(46,31,22,.95);border-color:transparent}
+}
+@media (prefers-reduced-transparency:reduce){
+  .toast{background:rgba(46,31,22,.97);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .overlay{backdrop-filter:none;-webkit-backdrop-filter:none}
+}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -221,7 +250,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.12.0';
+var VERSION = '1.13.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
