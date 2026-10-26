@@ -180,7 +180,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.8.0';
+var VERSION = '1.9.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -415,6 +415,18 @@ function checkVersion() {
 }
 
 /* ---------- views ---------- */
+/* working sets are numbered 1..n; warm-up sets are labelled "חימום" and don't take a number */
+function setsHtml(w, e) {
+  var n = 0;
+  return e.sets.map(function (r, i) {
+    var warm = !!(e.warm && e.warm[i]);
+    var label = warm ? 'חימום' : 'סט ' + (++n);
+    return '<div class="set' + (warm ? ' warm' : '') + '">' +
+      '<button class="setno" type="button" data-a="toggleWarm" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-pressed="' + warm + '" aria-label="' + (warm ? 'ביטול סימון החימום בסט ' + (i + 1) : 'סימון כחימום ב' + label) + ' של ' + esc(e.name) + '">' + label + '</button>' +
+      '<input type="number" inputmode="numeric" min="0" value="' + esc(r) + '" data-reps="1" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-label="חזרות ב' + label + ' של ' + esc(e.name) + '">' +
+      '<span style="font-size:11px">חזרות</span></div>';
+  }).join('');
+}
 function vHome() {
   var now = new Date(), tk = dkey(now), h = now.getHours();
   var greeting = h < 5 ? 'לילה טוב' : h < 12 ? 'בוקר טוב' : h < 17 ? 'צהריים טובים' : h < 21 ? 'ערב טוב' : 'לילה טוב';
@@ -495,13 +507,7 @@ function vHome() {
           '<button style="background:var(--sand)" data-a="dec" data-w="' + w.id + '" data-e="' + e.id + '" aria-label="פחות סטים">' + ic(P.minus, 16, 2.6) + '</button>' +
           '<span style="min-width:28px;text-align:center;font-size:17px;font-weight:700">' + e.sets.length + '</span>' +
           '<button style="background:var(--pink);color:#fff" data-a="inc" data-w="' + w.id + '" data-e="' + e.id + '" aria-label="עוד סט">' + ic(P.plus, 16, 2.6) + '</button></div></div>' +
-        '<div class="sets">' + e.sets.map(function (r, i) {
-          var warm = !!(e.warm && e.warm[i]);
-          return '<div class="set' + (warm ? ' warm' : '') + '">' +
-            '<button class="setno" type="button" data-a="toggleWarm" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-pressed="' + warm + '" aria-label="' + (warm ? 'ביטול החימום' : 'סימון כחימום') + ' בסט ' + (i + 1) + ' של ' + esc(e.name) + '">' + (warm ? 'חימום' : 'סט ' + (i + 1)) + '</button>' +
-            '<input type="number" inputmode="numeric" min="0" value="' + esc(r) + '" data-reps="1" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-label="חזרות ב' + (warm ? 'חימום' : 'סט ' + (i + 1)) + ' של ' + esc(e.name) + '">' +
-            '<span style="font-size:11px">חזרות</span></div>';
-        }).join('') + '</div></div>';
+        '<div class="sets">' + setsHtml(w, e) + '</div></div>';
     });
     html += '<button class="dashed" data-a="openSheet" data-w="' + w.id + '">' + ic(P.plus, 18, 2.4) + 'הוספת תרגיל</button>' +
       (w.done
