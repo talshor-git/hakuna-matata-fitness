@@ -142,6 +142,7 @@ h1,h2,h3{margin:0}
 .sbig{position:relative;border-radius:30px;background:var(--ink);color:var(--bg);padding:24px;display:flex;flex-direction:column;align-items:center;gap:4px;overflow:hidden}
 .glow{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,122,26,.45),rgba(255,122,26,0) 70%);animation:glow 2.4s ease-in-out infinite}
 .mile{border:none;text-align:right;background:#fff;border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:14px;width:100%}
+.mile.locked{background:transparent;box-shadow:none;opacity:.75;background-image:none}
 .mbadge{width:52px;height:52px;border-radius:16px;background:var(--sand);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .mile.got .mbadge{background:var(--ink)}
 .mbar{height:6px;border-radius:3px;background:var(--sand);overflow:hidden}
@@ -276,7 +277,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.15.0';
+var VERSION = '1.16.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -683,14 +684,17 @@ function vStreak() {
     '<h2 class="h2">רצפים בדרך</h2><div class="stack g10">' +
     MILESTONES.map(function (m) {
       var got = best >= m, pct = got ? 100 : Math.round(streak / m * 100);
-      return '<button class="mile' + (got ? ' got' : '') + '" data-a="preview" data-m="' + m + '" aria-label="רצף של ' + m + ' ימים, תצוגה מקדימה">' +
-        '<span class="mbadge">' + (got ? flame(28) : flame(28, '#CDBBA8', '#E6D6C6')) + '</span>' +
+      var body = '<span class="mbadge">' + (got ? flame(28) : flame(28, '#CDBBA8', '#E6D6C6')) + '</span>' +
         '<span class="stack grow g6"><span class="row between g8" style="align-items:baseline"><span style="font-size:17px;font-weight:700">' + m + ' ימים</span>' +
         '<span style="font-size:13px;font-weight:600;color:' + (got ? 'var(--fire-text)' : 'var(--muted)') + '">' + (got ? 'הושג' : 'עוד ' + (m - streak) + ' ימים') + '</span></span>' +
-        '<span class="mbar"><span style="width:' + pct + '%"></span></span></span></button>';
+        '<span class="mbar"><span style="width:' + pct + '%"></span></span></span>';
+      /* no peeking at a streak you haven't reached yet */
+      return got
+        ? '<button class="mile got" data-a="preview" data-m="' + m + '" aria-label="רצף של ' + m + ' ימים, צפייה בחגיגה">' + body + '</button>'
+        : '<div class="mile locked" aria-label="רצף של ' + m + ' ימים, עוד לא הושג">' + body + '</div>';
     }).join('') + '</div>' +
     '<div class="card row g12" style="padding:12px 16px"><img src="' + IMG.yoga + '" alt="" style="width:70px;height:80px;object-fit:contain;flex-shrink:0">' +
-      '<span class="muted grow" style="font-size:14px;line-height:1.45">רצף נספר מכל יום שבו סימנת אימון כבוצע. לחיצה על אבן דרך מציגה תצוגה מקדימה.</span></div>' +
+      '<span class="muted grow" style="font-size:14px;line-height:1.45">רצף נספר מכל יום שבו סימנת אימון כבוצע. כשמגיעים ליעד — החגיגה קופצת מעצמה.</span></div>' +
   '</div>';
 }
 
@@ -1464,11 +1468,13 @@ document.addEventListener('wheel', function (ev) {
 
 /* new day while the app stays open */
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'visible' && dkey(new Date()) !== today0) { today0 = dkey(new Date()); ui.sel = today0; ui.weekOffset = 0; render(); }
+  if (document.visibilityState === 'visible' && dkey(new Date()) !== today0) { today0 = dkey(new Date()); ui.sel = today0; ui.weekOffset = 0; checkMilestone(); save(); render(); }
 });
 
-/* first entry: ask for a profile picture */
+/* first entry: ask for a profile picture — otherwise celebrate a streak reached while away */
 if (!S.settings.avatarSeen) ui.picker = { index: S.settings.avatar || 1 };
+else checkMilestone();
+save();
 
 render();
 })();
