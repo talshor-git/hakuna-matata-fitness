@@ -95,6 +95,10 @@ h1,h2,h3{margin:0}
 .set{display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff;border-radius:14px;padding:8px 4px;font-size:12px;color:var(--muted)}
 .set input{width:52px;height:32px;border:none;border-radius:10px;background:var(--pink-soft);text-align:center;font-size:17px;font-weight:700;outline:none}
 .set input:focus{box-shadow:0 0 0 2px var(--pink)}
+.setno{border:1px dashed var(--line);background:transparent;border-radius:9px;height:20px;padding:0 7px;font-size:11px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center}
+.set.warm{background:#FDF0DF}
+.set.warm .setno{border-style:solid;border-color:#EFC08A;background:#FBE2C4;color:var(--fire-text)}
+.set.warm input{background:#F7D9B4}
 .dashed{height:48px;border-radius:18px;border:2px dashed var(--line);background:transparent;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .big{height:52px;border-radius:26px;width:100%}
 
@@ -176,7 +180,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.7.0';
+var VERSION = '1.8.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -236,7 +240,7 @@ function pad(n) { return n < 10 ? '0' + n : '' + n; }
 function dkey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 function addDays(d, n) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; }
 function fromKey(k) { var p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
-function mkEx(name, reps) { return { id: uid(), name: name, sets: reps.map(String) }; }
+function mkEx(name, reps) { return { id: uid(), name: name, sets: reps.map(String), warm: reps.map(function () { return false; }) }; }
 function isDoneDay(k) { return (S.logs[k] || []).some(function (w) { return w.done; }); }
 function streakNow() {
   var d = new Date();
@@ -258,6 +262,19 @@ function plural(n, one, many) { return n === 1 ? one : n + ' ' + many; }
 function freshData() {
   return { logs: {}, library: defaultLibrary(), seen: [], chat: [], settings: { apiKey: '', model: DEFAULT_MODEL, effort: DEFAULT_EFFORT }, lastBackup: null };
 }
+function normalizeWarm(logs) {
+  Object.keys(logs || {}).forEach(function (k) {
+    (logs[k] || []).forEach(function (w) {
+      (w.ex || []).forEach(function (e) {
+        if (!Array.isArray(e.sets)) e.sets = [];
+        if (!Array.isArray(e.warm)) e.warm = [];
+        while (e.warm.length < e.sets.length) e.warm.push(false);
+        if (e.warm.length > e.sets.length) e.warm.length = e.sets.length;
+      });
+    });
+  });
+  return logs;
+}
 function normalize(d) {
   var f = freshData();
   var st = Object.assign({}, f.settings, d.settings || {});
@@ -266,7 +283,7 @@ function normalize(d) {
   if (st.apiKey && st.apiKey.indexOf('sk-ant-') === 0) st.apiKey = '';
   if (!EFFORTS.some(function (x) { return x[0] === st.effort; })) st.effort = DEFAULT_EFFORT;
   return {
-    logs: d.logs && typeof d.logs === 'object' ? d.logs : f.logs,
+    logs: normalizeWarm(d.logs && typeof d.logs === 'object' ? d.logs : f.logs),
     library: Array.isArray(d.library) ? d.library : f.library,
     seen: Array.isArray(d.seen) ? d.seen : [],
     chat: Array.isArray(d.chat) ? d.chat : [],
@@ -456,10 +473,12 @@ function vHome() {
   }
 
   list.forEach(function (w) {
-    var totalSets = w.ex.reduce(function (a, e) { return a + e.sets.length; }, 0);
+    var warmSets = 0, allSets = 0;
+    w.ex.forEach(function (e) { allSets += e.sets.length; (e.warm || []).forEach(function (x) { if (x) warmSets++; }); });
+    var summary = w.ex.length + ' תרגילים · ' + (allSets - warmSets) + ' סטים' + (warmSets ? ' · ' + warmSets + ' חימום' : '');
     var open = !w.done || !!ui.doneOpen[w.id];
     var head = '<div class="wbadge">' + (w.done ? ic(P.check, 24, 3, '#fff') : ic(P.dumbbell, 24, 2.2, '#C8325F')) + '</div>' +
-      '<div class="stack grow" style="gap:2px"><h3 style="font-size:18px;font-weight:700">' + esc(w.name) + '</h3><span class="muted" style="font-size:13px">' + w.ex.length + ' תרגילים · ' + totalSets + ' סטים</span></div>';
+      '<div class="stack grow" style="gap:2px"><h3 style="font-size:18px;font-weight:700">' + esc(w.name) + '</h3><span class="muted" style="font-size:13px">' + summary + '</span></div>';
     html += '<article class="card workout' + (open ? ' stack g14' : '') + (w.done ? ' done' : '') + (w.done && open ? ' open' : '') + '">' +
       '<div class="row g12">' +
         (w.done
@@ -477,7 +496,11 @@ function vHome() {
           '<span style="min-width:28px;text-align:center;font-size:17px;font-weight:700">' + e.sets.length + '</span>' +
           '<button style="background:var(--pink);color:#fff" data-a="inc" data-w="' + w.id + '" data-e="' + e.id + '" aria-label="עוד סט">' + ic(P.plus, 16, 2.6) + '</button></div></div>' +
         '<div class="sets">' + e.sets.map(function (r, i) {
-          return '<label class="set">סט ' + (i + 1) + '<input type="number" inputmode="numeric" min="0" value="' + esc(r) + '" data-reps="1" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-label="חזרות בסט ' + (i + 1) + ' של ' + esc(e.name) + '"><span style="font-size:11px">חזרות</span></label>';
+          var warm = !!(e.warm && e.warm[i]);
+          return '<div class="set' + (warm ? ' warm' : '') + '">' +
+            '<button class="setno" type="button" data-a="toggleWarm" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-pressed="' + warm + '" aria-label="' + (warm ? 'ביטול החימום' : 'סימון כחימום') + ' בסט ' + (i + 1) + ' של ' + esc(e.name) + '">' + (warm ? 'חימום' : 'סט ' + (i + 1)) + '</button>' +
+            '<input type="number" inputmode="numeric" min="0" value="' + esc(r) + '" data-reps="1" data-w="' + w.id + '" data-e="' + e.id + '" data-i="' + i + '" aria-label="חזרות ב' + (warm ? 'חימום' : 'סט ' + (i + 1)) + ' של ' + esc(e.name) + '">' +
+            '<span style="font-size:11px">חזרות</span></div>';
         }).join('') + '</div></div>';
     });
     html += '<button class="dashed" data-a="openSheet" data-w="' + w.id + '">' + ic(P.plus, 18, 2.4) + 'הוספת תרגיל</button>' +
@@ -829,8 +852,17 @@ document.addEventListener('click', function (ev) {
     case 'toggleW': w = findW(b.dataset.w); if (w) { w.done = !w.done; if (w.done) { delete ui.doneOpen[w.id]; checkMilestone(); } commit(); if (w.done && !ui.celebrate) toast('כל הכבוד! האימון סומן כבוצע'); } break;
     case 'toggleDone': ui.doneOpen[b.dataset.w] = !ui.doneOpen[b.dataset.w]; render(); break;
     case 'delEx': w = findW(b.dataset.w); if (w) { w.ex = w.ex.filter(function (x) { return x.id !== b.dataset.e; }); commit(); } break;
-    case 'inc': e = findE(findW(b.dataset.w), b.dataset.e); if (e) { e.sets.push(e.sets.length ? e.sets[e.sets.length - 1] : '10'); commit(); } break;
-    case 'dec': e = findE(findW(b.dataset.w), b.dataset.e); if (e && e.sets.length > 1) { e.sets.pop(); commit(); } break;
+    case 'inc': e = findE(findW(b.dataset.w), b.dataset.e); if (e) { if (!Array.isArray(e.warm)) e.warm = []; e.sets.push(e.sets.length ? e.sets[e.sets.length - 1] : '10'); e.warm.push(false); commit(); } break;
+    case 'dec': e = findE(findW(b.dataset.w), b.dataset.e); if (e && e.sets.length > 1) { e.sets.pop(); if (Array.isArray(e.warm)) e.warm.pop(); commit(); } break;
+    case 'toggleWarm':
+      e = findE(findW(b.dataset.w), b.dataset.e);
+      if (e) {
+        if (!Array.isArray(e.warm)) e.warm = [];
+        while (e.warm.length < e.sets.length) e.warm.push(false);
+        e.warm[+b.dataset.i] = !e.warm[+b.dataset.i];
+        commit();
+      }
+      break;
     case 'openSheet': ui.sheetFor = b.dataset.w; ui.search = ''; render(); break;
     case 'closeSheet': ui.sheetFor = null; render(); break;
     case 'addFromLib': addExercise(b.dataset.n); break;
