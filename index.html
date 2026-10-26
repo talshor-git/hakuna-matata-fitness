@@ -161,6 +161,17 @@ h1,h2,h3{margin:0}
 .coach-act.coach-plan{background:var(--pink);color:#fff}
 .typing span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#D9C8B8;margin:0 2px;animation:blink 1.2s infinite}
 .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+/* coach fullscreen */
+.coach.full{position:fixed;top:0;left:0;right:0;height:var(--vvh,100dvh);z-index:30;border-radius:0;overflow:hidden;
+  padding-block:calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-bottom) + 14px);
+  padding-inline:max(16px,calc((100vw - 440px) / 2));
+  gap:12px}
+.coach.full.anim{animation:fullIn .24s cubic-bezier(.2,.9,.3,1)}
+.coach.full .head img{width:56px;height:56px}
+.coach.full .head h2{font-size:19px}
+.coach.full .msgs{max-height:none;flex:1 1 auto;min-height:0;padding:2px 2px 6px}
+@keyframes fullIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.coach.full.anim{animation:none}}
 
 /* streak */
 .sbig{position:relative;border-radius:30px;background:var(--strong);color:var(--on-strong);padding:24px;display:flex;flex-direction:column;align-items:center;gap:4px;overflow:hidden}
@@ -306,7 +317,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.18.0';
+var VERSION = '1.19.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -353,6 +364,8 @@ var P = {
   gear: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path>',
   search: '<circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path>',
   send: '<path d="M20 4L3 11l7 2 2 7 8-16z"></path><path d="M10 13l4-4"></path>',
+  expand: '<path d="M14 2h8v8z" fill="currentColor"></path><path d="M10 22H2v-8z" fill="currentColor"></path>',
+  collapse: '<path d="M14 2v8h8z" fill="currentColor"></path><path d="M10 22v-8H2z" fill="currentColor"></path>',
   down: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>', up: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"></path>',
   share: '<path d="M12 3v12M8 7l4-4 4 4"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>',
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path>',
@@ -453,7 +466,7 @@ function save() {
 var S = load();
 save(); /* persist any migration from a previous version */
 var today0 = dkey(new Date());
-var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {}, confirm: null, picker: null };
+var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {}, confirm: null, picker: null, coachFull: false };
 
 /* ---------- toast ---------- */
 var toastTimer;
@@ -481,7 +494,10 @@ function keyboardOpen() {
   if (h > vvMax) vvMax = h;
   return (vvMax - h) > 100;
 }
-function syncKeyboard() { document.body.classList.toggle('kb', keyboardOpen()); }
+function syncKeyboard() {
+  document.body.classList.toggle('kb', keyboardOpen());
+  document.documentElement.style.setProperty('--vvh', visH() + 'px');
+}
 function placeField() {
   var el = document.getElementById('newName');
   if (!el || document.activeElement !== el) return;
@@ -698,11 +714,15 @@ function vCoach() {
     return '<div class="msg a' + (m.local ? ' err' : '') + '">' + fmtCoach(m.text) + adds + '</div>';
   }).join('');
   if (ui.busy) msgs += '<div class="msg a typing" aria-label="המאמן מקליד"><span></span><span></span><span></span></div>';
-  return '<section class="coach" aria-label="מאמן הכושר שלי">' +
+  var fullLbl = ui.coachFull ? 'יציאה ממסך מלא' : 'מסך מלא';
+  return '<section class="coach' + (ui.coachFull ? ' full' : '') + (ui.coachFull && ui.coachFullAnim ? ' anim' : '') + '" aria-label="מאמן הכושר שלי">' +
     '<div class="row g12 head"><img src="' + IMG.lift + '" alt="">' +
       '<div class="stack grow" style="gap:4px"><span class="row g6" style="font-size:13px;font-weight:600;color:#FFB37A">' + ic(P.spark, 15, 2) + 'שאלי את ה-AI</span>' +
       '<h2 style="font-size:20px;font-weight:700">מאמן הכושר שלי</h2><span style="font-size:13px;color:#D9C8B8">תרגילים, אזורים בגוף, טכניקה ותכנון אימונים</span></div>' +
-      (S.chat.length ? '<button class="icon-btn" style="background:rgba(251,245,239,.1);color:var(--on-strong)" data-a="coachClear" aria-label="ניקוי השיחה">' + ic(P.trash, 18, 2) + '</button>' : '') +
+      '<span class="row g6">' +
+        '<button class="icon-btn" style="background:rgba(251,245,239,.1);color:var(--on-strong)" data-a="coachFull" aria-label="' + fullLbl + '" aria-pressed="' + ui.coachFull + '" title="' + fullLbl + '">' + (ui.coachFull ? ic(P.collapse, 19, 1.5) : ic(P.expand, 19, 1.5)) + '</button>' +
+        (S.chat.length ? '<button class="icon-btn" style="background:rgba(251,245,239,.1);color:var(--on-strong)" data-a="coachClear" aria-label="ניקוי השיחה" title="ניקוי השיחה">' + ic(P.trash, 18, 2) + '</button>' : '') +
+      '</span>' +
     '</div>' +
     (S.chat.length || ui.busy ? '<div class="msgs" id="msgs">' + msgs + '</div>' : '') +
     (S.chat.length ? '' : '<div class="row g8" style="flex-wrap:wrap">' + COACH_CHIPS.map(function (q) { return '<button class="chip" data-a="coachChip" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>') +
@@ -1016,11 +1036,12 @@ function render() {
   if (nb) nb.innerHTML = vNav();
   positionNavLens();
   document.getElementById('layer').innerHTML = vLayer();
-  document.body.style.overflow = (ui.sheetFor || ui.celebrate || ui.confirm) ? 'hidden' : '';
+  document.body.style.overflow = (ui.sheetFor || ui.celebrate || ui.confirm || ui.coachFull) ? 'hidden' : '';
   var m = document.getElementById('msgs'); if (m) m.scrollTop = m.scrollHeight;
   if (ui.celebrate) { var b = document.getElementById('celebBtn'); if (b) b.focus(); }
   if (ui.confirm) { var cc = document.getElementById('cfCancel'); if (cc) cc.focus(); }
   if (ui.picker) initAvatarPicker();
+  ui.coachFullAnim = false;
 }
 
 /* ---------- styled confirm ---------- */
@@ -1250,7 +1271,7 @@ document.addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-a]'); if (!b || b.disabled) return;
   var a = b.dataset.a, w, e;
   switch (a) {
-    case 'tab': ui.tab = b.dataset.t; ui.sheetFor = null; render(); window.scrollTo(0, 0); break;
+    case 'tab': ui.tab = b.dataset.t; ui.sheetFor = null; ui.coachFull = false; render(); window.scrollTo(0, 0); break;
     case 'day': ui.sel = b.dataset.k; ui.newOpen = false; render(); break;
     case 'weekPrev': ui.weekOffset--; render(); break;
     case 'weekNext': ui.weekOffset++; render(); break;
@@ -1315,6 +1336,7 @@ document.addEventListener('click', function (ev) {
     case 'preview': ui.celebrate = +b.dataset.m; render(); break;
     case 'closeCeleb': ui.celebrate = null; render(); break;
     case 'coachChip': askCoach(b.dataset.q); break;
+    case 'coachFull': ui.coachFull = !ui.coachFull; ui.coachFullAnim = true; render(); break;
     case 'coachClear':
       askConfirm({ title: 'ניקוי השיחה', text: 'למחוק את כל השיחה עם המאמן?', ok: 'ניקוי' }).then(function (yes) {
         if (!yes) return;
@@ -1417,6 +1439,7 @@ document.addEventListener('keydown', function (ev) {
     else if (ui.picker) { S.settings.avatarSeen = true; ui.picker = null; commit(); }
     else if (ui.celebrate) { ui.celebrate = null; render(); }
     else if (ui.sheetFor) { ui.sheetFor = null; render(); }
+    else if (ui.coachFull) { ui.coachFull = false; render(); }
   }
 });
 
@@ -1573,6 +1596,7 @@ document.addEventListener('visibilitychange', function () {
 });
 
 applyTheme();
+syncKeyboard();
 
 if (window.matchMedia) {
   var mqDark = window.matchMedia('(prefers-color-scheme: dark)');
