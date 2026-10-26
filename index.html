@@ -135,6 +135,8 @@ h1,h2,h3{margin:0}
 .addex{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .addex button{height:34px;padding:0 12px;border-radius:17px;border:none;background:rgba(255,122,26,.2);color:#FFC9A1;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .addex button[disabled]{background:rgba(251,245,239,.08);color:#BFAE9E;cursor:default}
+.coach-act{display:flex;align-items:center;gap:8px;width:100%;margin-top:8px;min-height:42px;padding:9px 14px;border-radius:21px;border:none;background:rgba(255,122,26,.18);color:#FFC9A1;font-size:13px;font-weight:700;text-align:right}
+.coach-act.coach-plan{background:var(--pink);color:#fff}
 .typing span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#D9C8B8;margin:0 2px;animation:blink 1.2s infinite}
 .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
 
@@ -277,7 +279,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.16.0';
+var VERSION = '1.17.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -628,6 +630,10 @@ function fmtCoach(t) {
   return h.replace(/\n/g, '<br>');
 }
 
+function openWorkoutToday() {
+  var list = S.logs[dkey(new Date())] || [];
+  return list.filter(function (w) { return !w.done; })[0] || null;
+}
 function vCoach() {
   var msgs = S.chat.map(function (m, idx) {
     if (m.role === 'user') return '<div class="msg u">' + esc(m.text) + '</div>';
@@ -637,6 +643,11 @@ function vCoach() {
         var have = S.library.some(function (l) { return l.name === x.name; });
         return '<button data-a="coachAdd" data-m="' + idx + '" data-j="' + j + '"' + (have ? ' disabled' : '') + '>' + (have ? ic(P.check, 14, 2.6) + esc(x.name) + ' בתפריט' : ic(P.plus, 14, 2.6) + esc(x.name)) + '</button>';
       }).join('') + '</div>';
+      var openW = openWorkoutToday();
+      if (openW) adds += '<button class="coach-act" data-a="coachToWorkout" data-m="' + idx + '">' + ic(P.plus, 16, 2.4) + 'הוספה לאימון של היום' + (m.ex.length > 1 ? ' (' + m.ex.length + ')' : '') + '</button>';
+    }
+    if (m.plan) {
+      adds += '<button class="coach-act coach-plan" data-a="coachPlan" data-m="' + idx + '">' + ic(P.check, 16, 2.6) + 'יצירת האימון להיום: ' + esc(m.plan.name) + ' (' + m.plan.ex.length + ' תרגילים)</button>';
     }
     return '<div class="msg a' + (m.local ? ' err' : '') + '">' + fmtCoach(m.text) + adds + '</div>';
   }).join('');
@@ -1101,13 +1112,26 @@ function coachSystem() {
     'אם טל מתארת כאב, פציעה או מצב רפואי, הצע חלופות עדינות והמלץ לפנות לרופא או לפיזיותרפיסט. אל תאבחן.',
     'התפריט השמור שלה: ' + S.library.map(function (l) { return l.name + ' (' + l.cat + ')'; }).join(', ') + '.',
     recent.length ? 'האימונים שלה בשבועיים האחרונים:\n' + recent.join('\n') : 'אין לה עדיין אימונים רשומים בשבועיים האחרונים.',
-    'כשאתה ממליץ על תרגילים ספציפיים, הוסף בסוף התשובה בלוק במבנה הזה בדיוק, שורה לכל תרגיל (עד 6), עם קטגוריה אחת מתוך: ' + CATS.join(', ') + '.',
+    'היה פרואקטיבי: בכל פעם שאתה מזכיר תרגיל בשמו — גם אם טל שאלה עליו וגם אם אתה ממליץ עליו — הוסף בסוף התשובה בלוק <ex> עם אותו תרגיל, כדי שיופיע לה כפתור להוספה לתפריט. זה חל במיוחד על שאלות כמו "איך עושים סקוואט?" או "מה זה פלאנק?".',
+    'בכל בלוק <ex> כתוב שורה לכל תרגיל (עד 6), עם קטגוריה אחת מתוך: ' + CATS.join(', ') + '.',
     '<ex>\nשם התרגיל|קטגוריה\n</ex>',
-    'אל תזכיר את הבלוק בטקסט עצמו. אם לא המלצת על תרגילים, אל תוסיף אותו.'
+    'אם אתה בונה לה אימון שלם — למשל כשהיא מבקשת "תבני לי אימון רגליים" או "מה לעשות היום?" — הוסף בנוסף בלוק <plan> עם שם קצר לאימון ורשימת התרגילים בסדר שבו תבצעי אותם, מופרדים בנקודה-פסיק. אל תוסיף <plan> אם היא רק שאלה על תרגיל בודד.',
+    '<plan>\nשם האימון|תרגיל 1; תרגיל 2; תרגיל 3\n</plan>',
+    'הבלוקים חייבים להיות בסוף התשובה, בדיוק במבנה הזה. אל תזכיר אותם בטקסט עצמו.',
+    'עוד דרכים להיות פרואקטיבי, בלי לשאול יותר מדי: אם היא מתארת כאב או אי-נוחות — הצע תרגיל חלופי עדין ושים אותו ב-<ex>. אם היא מספרת שהתרגיל קל מדי או שהיא רוצה להתקדם — הצע עלייה מדויקת (למשל "תוסיפי 2 חזרות לסט") וציין לאיזה תרגיל. אם היא שואלת מה לעשות היום והאימון שלה עוד לא מלא — הצע תרגיל משלים אחד. תמיד תן את ההמלצה ישר, בלי לשאול "רוצה שאציע?".'
   ].join('\n\n');
 }
 function parseCoach(text) {
-  var ex = [], m = text.match(/<ex>([\s\S]*?)<\/ex>/);
+  var ex = [], plan = null, m = text.match(/<plan>([\s\S]*?)<\/plan>/);
+  if (m) {
+    var line = (m[1].split('\n').filter(function (x) { return x.trim(); })[0] || '');
+    var pp = line.split('|');
+    var pname = (pp[0] || '').trim();
+    var plist = (pp[1] || '').split(';').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 10);
+    if (pname && plist.length) plan = { name: pname, ex: plist };
+    text = text.replace(m[0], '').trim();
+  }
+  m = text.match(/<ex>([\s\S]*?)<\/ex>/);
   if (m) {
     m[1].split('\n').forEach(function (line) {
       var p = line.split('|'); var n = (p[0] || '').trim(); var c = (p[1] || '').trim();
@@ -1115,7 +1139,7 @@ function parseCoach(text) {
     });
     text = text.replace(m[0], '').trim();
   }
-  return { text: text, ex: ex.slice(0, 6) };
+  return { text: text, ex: ex.slice(0, 6), plan: plan };
 }
 function askCoach(q) {
   q = (q || '').trim(); if (!q || ui.busy) return;
@@ -1155,7 +1179,7 @@ function askCoach(q) {
       var cm = res.j.choices && res.j.choices[0] && res.j.choices[0].message;
       var t = ((cm && cm.content) || '').trim();
       var p = parseCoach(t);
-      S.chat.push({ role: 'assistant', text: p.text || '...', ex: p.ex });
+      S.chat.push({ role: 'assistant', text: p.text || '...', ex: p.ex, plan: p.plan });
     }
   }).catch(function () {
     S.chat.push({ role: 'assistant', local: true, text: 'אין חיבור למאמן כרגע. בדקי את האינטרנט ונסי שוב.' });
@@ -1246,6 +1270,27 @@ document.addEventListener('click', function (ev) {
       var msg = S.chat[+b.dataset.m], x = msg && msg.ex && msg.ex[+b.dataset.j];
       if (x && !S.library.some(function (l) { return l.name === x.name; })) {
         S.library.unshift({ id: uid(), name: x.name, cat: x.cat }); commit(); toast('נשמר בתפריט: ' + x.name);
+      }
+      break;
+    case 'coachToWorkout':
+      var cw = S.chat[+b.dataset.m];
+      var wOpen = openWorkoutToday();
+      if (cw && cw.ex && cw.ex.length && wOpen) {
+        cw.ex.forEach(function (x) { wOpen.ex.push(mkEx(x.name, [10, 10, 10])); });
+        cw.ex.forEach(function (x) { if (!S.library.some(function (l) { return l.name === x.name; })) S.library.unshift({ id: uid(), name: x.name, cat: x.cat }); });
+        delete ui.doneOpen[wOpen.id];
+        commit(); toast('נוסף לאימון של היום: ' + cw.ex.map(function (x) { return x.name; }).join(', '));
+      }
+      break;
+    case 'coachPlan':
+      var cp = S.chat[+b.dataset.m];
+      if (cp && cp.plan) {
+        var day = dkey(new Date());
+        var exs = cp.plan.ex.map(function (n) { return mkEx(n, [10, 10, 10]); });
+        (S.logs[day] = S.logs[day] || []).push({ id: uid(), name: cp.plan.name, done: false, ex: exs });
+        cp.plan.ex.forEach(function (n) { if (!S.library.some(function (l) { return l.name === n; })) S.library.unshift({ id: uid(), name: n, cat: 'אחר' }); });
+        ui.tab = 'home'; ui.sel = day; ui.weekOffset = 0;
+        commit(); toast('האימון "' + cp.plan.name + '" נוסף להיום');
       }
       break;
     case 'setEffort':
