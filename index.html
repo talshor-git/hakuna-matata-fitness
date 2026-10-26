@@ -170,6 +170,9 @@ h1,h2,h3{margin:0}
 .coach.full .head img{width:56px;height:56px}
 .coach.full .head h2{font-size:19px}
 .coach.full .msgs{max-height:none;flex:1 1 auto;min-height:0;padding:2px 2px 6px}
+.coach.full .head,.coach.full .coach-chips,.coach.full form[data-form="coach"]{flex-shrink:0}
+.coach.full .coach-chips{margin-top:auto}
+.coach.full .msgs + form[data-form="coach"]{padding-top:12px;border-top:1px solid rgba(251,245,239,.1)}
 @keyframes fullIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.coach.full.anim{animation:none}}
 
@@ -317,7 +320,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.20.0';
+var VERSION = '1.21.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -726,7 +729,7 @@ function vCoach() {
       '</span>' +
     '</div>' +
     (S.chat.length || ui.busy ? '<div class="msgs" id="msgs">' + msgs + '</div>' : '') +
-    (S.chat.length ? '' : '<div class="row g8" style="flex-wrap:wrap">' + COACH_CHIPS.map(function (q) { return '<button class="chip" data-a="coachChip" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>') +
+    (S.chat.length ? '' : '<div class="row g8 coach-chips" style="flex-wrap:wrap">' + COACH_CHIPS.map(function (q) { return '<button class="chip" data-a="coachChip" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>') +
     '<form class="row g8" data-form="coach"><label class="sr" for="coachInput">שאלה למאמן</label>' +
       '<input class="input grow" id="coachInput" placeholder="למשל: מה לעשות לכתפיים?" autocomplete="off"' + (ui.busy ? ' disabled' : '') + '>' +
       '<button class="icon-btn" type="submit" style="width:48px;height:48px;background:var(--pink);color:#fff" aria-label="שליחה"' + (ui.busy ? ' disabled' : '') + '>' + ic(P.send, 20, 2.2) + '</button></form>' +
