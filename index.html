@@ -175,7 +175,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.5.0';
+var VERSION = '1.6.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -296,6 +296,21 @@ function toast(msg) {
   document.body.appendChild(el);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function () { el.remove(); }, 2600);
+}
+
+/* bring the "new workout" name field above the on-screen keyboard (again once it settles) */
+function focusNewName() {
+  var ni = document.getElementById('newName');
+  if (!ni) return;
+  ni.focus();
+  var bring = function () {
+    var r = ni.getBoundingClientRect();
+    var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    var y = Math.min(max, Math.max(0, window.pageYOffset + r.top - window.innerHeight * 0.26));
+    try { window.scrollTo({ top: y, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, y); }
+  };
+  bring();
+  setTimeout(bring, 320);
 }
 
 /* ---------- version update ---------- */
@@ -760,9 +775,9 @@ document.addEventListener('click', function (ev) {
     case 'weekPrev': ui.weekOffset--; render(); break;
     case 'weekNext': ui.weekOffset++; render(); break;
     case 'today': ui.weekOffset = 0; ui.sel = dkey(new Date()); render(); break;
-    case 'openNew': ui.newOpen = true; render(); var ni = document.getElementById('newName'); if (ni) ni.focus(); break;
+    case 'openNew': ui.newOpen = true; render(); focusNewName(); break;
     case 'closeNew': ui.newOpen = false; render(); break;
-    case 'quick': var inp = document.getElementById('newName'); if (inp) { inp.value = b.dataset.n; inp.focus(); } break;
+    case 'quick': var inp = document.getElementById('newName'); if (inp) { inp.value = b.dataset.n; focusNewName(); } break;
     case 'createWorkout':
       var nm = (document.getElementById('newName').value || '').trim() || 'אימון';
       (S.logs[ui.sel] = S.logs[ui.sel] || []).push({ id: uid(), name: nm, done: false, ex: [] });
