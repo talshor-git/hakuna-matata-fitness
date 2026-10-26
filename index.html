@@ -130,7 +130,8 @@ h1,h2,h3{margin:0}
 .mile.got .mbar span{background:var(--fire)}
 
 /* nav */
-.nav{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 18px);left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:34px;background:#fff;box-shadow:0 8px 28px rgba(46,31,22,.16);z-index:20}
+.nav{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 18px);left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:34px;background:#fff;box-shadow:0 8px 28px rgba(46,31,22,.16);z-index:20;transition:opacity .18s ease,transform .18s ease,visibility .18s}
+body.kb .nav{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-50%) translateY(140%)}
 .nav button{height:52px;min-width:52px;padding:0 14px;border-radius:26px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;transition:all .2s}
 .nav button.on{background:var(--pink);color:#fff;padding:0 18px}
 .nav button .lbl{display:none}
@@ -175,7 +176,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.6.0';
+var VERSION = '1.7.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -298,20 +299,57 @@ function toast(msg) {
   toastTimer = setTimeout(function () { el.remove(); }, 2600);
 }
 
-/* bring the "new workout" name field above the on-screen keyboard (again once it settles) */
+/* ---------- on-screen keyboard ---------- */
+/* hide the bottom nav while the keyboard is up, and keep the focused field above it */
+var vvMax = 0, fieldTimer = null;
+function visH() { return window.visualViewport ? window.visualViewport.height : window.innerHeight; }
+function typingNow() {
+  var a = document.activeElement;
+  return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+}
+function keyboardOpen() {
+  var h = visH();
+  if (!typingNow()) { vvMax = h; return false; }
+  if (h > vvMax) vvMax = h;
+  return (vvMax - h) > 100;
+}
+function syncKeyboard() { document.body.classList.toggle('kb', keyboardOpen()); }
+function placeField() {
+  var el = document.getElementById('newName');
+  if (!el || document.activeElement !== el) return;
+  var delta = el.getBoundingClientRect().top - visH() * 0.18;
+  if (Math.abs(delta) > 6) window.scrollBy(0, delta);
+}
+function stopFieldWatch() { if (fieldTimer) { clearInterval(fieldTimer); fieldTimer = null; } }
+function watchField() {
+  stopFieldWatch();
+  var n = 0;
+  fieldTimer = setInterval(function () { placeField(); if (++n >= 14) stopFieldWatch(); }, 90);
+}
 function focusNewName() {
   var ni = document.getElementById('newName');
   if (!ni) return;
   ni.focus();
-  var bring = function () {
-    var r = ni.getBoundingClientRect();
-    var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    var y = Math.min(max, Math.max(0, window.pageYOffset + r.top - window.innerHeight * 0.26));
-    try { window.scrollTo({ top: y, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, y); }
-  };
-  bring();
-  setTimeout(bring, 320);
+  syncKeyboard();
+  placeField();
+  watchField();
 }
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', function () {
+    syncKeyboard();
+    if (document.activeElement && document.activeElement.id === 'newName') { placeField(); watchField(); }
+  });
+  window.visualViewport.addEventListener('scroll', syncKeyboard);
+}
+window.addEventListener('resize', syncKeyboard);
+window.addEventListener('orientationchange', function () { vvMax = 0; syncKeyboard(); });
+document.addEventListener('focusin', function (ev) {
+  if (ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA')) syncKeyboard();
+});
+document.addEventListener('focusout', function () { setTimeout(function () { vvMax = 0; syncKeyboard(); }, 80); });
+/* stop nudging once she scrolls herself */
+document.addEventListener('touchstart', stopFieldWatch, { passive: true });
+document.addEventListener('wheel', stopFieldWatch, { passive: true });
 
 /* ---------- version update ---------- */
 function cmpVer(a, b) {
