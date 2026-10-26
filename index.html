@@ -191,6 +191,15 @@ body.kb .nav{opacity:0;visibility:hidden;pointer-events:none;transform:translate
 .celeb{position:fixed;inset:0;z-index:50;background:rgba(46,31,22,.72);display:flex;align-items:center;justify-content:center;padding:24px}
 .celeb .box{width:100%;max-width:380px;background:var(--bg);border-radius:34px;padding:28px 24px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:pop .45s cubic-bezier(.2,.9,.3,1.2)}
 .toast{position:fixed;top:calc(env(safe-area-inset-top) + 16px);left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:18px;font-size:14px;font-weight:500;box-shadow:0 10px 30px rgba(46,31,22,.25);animation:drop .3s ease-out;max-width:calc(100% - 32px)}
+/* confirm dialog */
+.cf{position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(46,31,22,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.cf .scrim{position:absolute;inset:0;border:none;background:transparent}
+.cf .box{position:relative;width:100%;max-width:340px;background:var(--bg);border-radius:28px;padding:24px 22px 18px;display:flex;flex-direction:column;gap:12px;text-align:center;animation:pop .32s cubic-bezier(.2,.9,.3,1.2)}
+.cf .ico{width:58px;height:58px;border-radius:20px;background:var(--pink-soft);color:var(--pink);display:flex;align-items:center;justify-content:center;margin:0 auto}
+.cf h2{font-size:19px;font-weight:800}
+.cf p{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
+.cf .acts{display:flex;gap:10px;margin-top:6px}
+.cf .acts .btn{flex:1;height:46px;border-radius:23px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 @keyframes flick{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.12) rotate(3deg)}}
@@ -219,6 +228,8 @@ body.kb .nav{opacity:0;visibility:hidden;pointer-events:none;transform:translate
 /* Panels that float above a scrim get the same rim, without paying for a blur */
 .sheet{background-image:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 26%);box-shadow:0 -12px 44px rgba(46,31,22,.28),inset 0 1px 0 rgba(255,255,255,.95)}
 .celeb .box{background-image:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0) 34%);box-shadow:0 24px 70px rgba(46,31,22,.45),inset 0 1px 0 rgba(255,255,255,.95)}
+.cf .box{background-image:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0) 34%);box-shadow:0 24px 70px rgba(46,31,22,.45),inset 0 1px 0 rgba(255,255,255,.95)}
+.cf .ico{box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 1px 3px rgba(46,31,22,.06)}
 /* True frosted glass — only where something actually passes behind it */
 .toast{background:rgba(46,31,22,.78);backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 30px rgba(46,31,22,.28),inset 0 1px 0 rgba(255,255,255,.2)}
 .overlay{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -250,7 +261,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.13.0';
+var VERSION = '1.14.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -372,7 +383,7 @@ function save() {
 var S = load();
 save(); /* persist any migration from a previous version */
 var today0 = dkey(new Date());
-var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {} };
+var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {}, confirm: null };
 
 /* ---------- toast ---------- */
 var toastTimer;
@@ -697,9 +708,6 @@ function vSettings() {
         '<span class="muted" style="font-size:12px;line-height:1.5">ככל שהעוצמה גבוהה יותר המאמן "חושב" יותר לפני שהוא עונה — תשובה איטית יותר אך מדויקת יותר. "ללא" מכבה את החשיבה ומחזיר תשובה מהירה.</span></div>' +
       '<button class="btn btn-ink" type="submit">' + ic(P.key, 20, 2.2) + 'שמירת הגדרות AI</button></form>' +
 
-    '<section class="card stack g12"><h2 class="h2">אזור מסוכן</h2>' +
-      '<button class="btn btn-ghost" data-a="resetAll" style="color:var(--pink);border-color:#F2C4D2">מחיקת כל הנתונים</button></section>' +
-
     '<section class="card stack g12" aria-labelledby="vph">' +
       '<div class="row between g12">' +
         '<div class="stack g4"><h2 class="h2" id="vph">גרסה</h2>' +
@@ -709,6 +717,8 @@ function vSettings() {
       '<button class="btn btn-ghost" data-a="checkUpdate"' + (ui.checking ? ' disabled' : '') + '>' + ic(P.refresh, 20, 2.2) + (ui.checking ? 'בודק עדכונים…' : 'בדיקת עדכון גרסה') + '</button>' +
       '<span class="muted" style="font-size:12px;line-height:1.5">בודק מול גיטהאב אם יצאה גרסה חדשה, ואם כן מרענן את האפליקציה אוטומטית.</span>' +
     '</section>' +
+
+    '<button class="btn btn-ghost" data-a="resetAll" style="color:var(--pink);border-color:#F2C4D2;margin-top:2px">' + ic(P.trash, 18, 2) + 'מחיקת כל הנתונים</button>' +
   '</div>';
 }
 
@@ -868,6 +878,20 @@ function vLayer() {
       '<button class="btn btn-pink" style="margin-top:10px;width:100%;height:54px;border-radius:27px;font-size:17px;font-weight:700" data-a="closeCeleb" id="celebBtn">יאללה, ממשיכות!</button>' +
       '</div></div>';
   }
+  var cf = ui.confirm;
+  if (cf) {
+    html += '<div class="cf" role="alertdialog" aria-modal="true" aria-labelledby="cftitle">' +
+      '<button class="scrim" data-a="confirmCancel" aria-label="ביטול"></button>' +
+      '<div class="box">' +
+        '<span class="ico">' + ic(P.trash, 26, 2.2) + '</span>' +
+        '<h2 id="cftitle">' + esc(cf.title) + '</h2>' +
+        '<p>' + esc(cf.text) + '</p>' +
+        '<div class="acts">' +
+          '<button class="btn btn-ghost" data-a="confirmCancel" id="cfCancel">ביטול</button>' +
+          '<button class="btn btn-pink" data-a="confirmOk">' + esc(cf.ok) + '</button>' +
+        '</div>' +
+      '</div></div>';
+  }
   return html;
 }
 
@@ -878,9 +902,24 @@ function render() {
   if (nb) nb.innerHTML = vNav();
   positionNavLens();
   document.getElementById('layer').innerHTML = vLayer();
-  document.body.style.overflow = (ui.sheetFor || ui.celebrate) ? 'hidden' : '';
+  document.body.style.overflow = (ui.sheetFor || ui.celebrate || ui.confirm) ? 'hidden' : '';
   var m = document.getElementById('msgs'); if (m) m.scrollTop = m.scrollHeight;
   if (ui.celebrate) { var b = document.getElementById('celebBtn'); if (b) b.focus(); }
+  if (ui.confirm) { var cc = document.getElementById('cfCancel'); if (cc) cc.focus(); }
+}
+
+/* ---------- styled confirm ---------- */
+function askConfirm(opts) {
+  return new Promise(function (resolve) {
+    ui.confirm = { title: opts.title, text: opts.text, ok: opts.ok || 'אישור', resolve: resolve };
+    render();
+  });
+}
+function settleConfirm(yes) {
+  var c = ui.confirm;
+  ui.confirm = null;
+  render();
+  if (c) c.resolve(yes);
 }
 
 /* ---------- data actions ---------- */
@@ -924,11 +963,13 @@ function doImport(file) {
     try {
       var j = JSON.parse(r.result), d = j && j.data ? j.data : j;
       if (!d || typeof d.logs !== 'object' || !Array.isArray(d.library)) throw new Error('bad');
-      if (!confirm('לשחזר מהקובץ? הנתונים הנוכחיים יוחלפו בנתוני הגיבוי.')) return;
-      var keep = S.settings;
-      S = normalize(d); S.settings = keep; S.lastBackup = j.exportedAt || new Date().toISOString();
-      ui.sel = dkey(new Date()); ui.weekOffset = 0;
-      commit(); toast('הנתונים שוחזרו מהגיבוי');
+      askConfirm({ title: 'שחזור מגיבוי', text: 'הנתונים הנוכחיים יוחלפו בנתוני הגיבוי.', ok: 'שחזור' }).then(function (yes) {
+        if (!yes) return;
+        var keep = S.settings;
+        S = normalize(d); S.settings = keep; S.lastBackup = j.exportedAt || new Date().toISOString();
+        ui.sel = dkey(new Date()); ui.weekOffset = 0;
+        commit(); toast('הנתונים שוחזרו מהגיבוי');
+      });
     } catch (e) { toast('הקובץ הזה לא נראה כמו גיבוי של ' + APP); }
   };
   r.readAsText(file);
@@ -1034,13 +1075,28 @@ document.addEventListener('click', function (ev) {
       ui.newOpen = false; commit(); break;
     case 'delW':
       w = findW(b.dataset.w);
-      if (w && (!w.ex.length || confirm('למחוק את "' + w.name + '"?'))) {
-        S.logs[ui.sel] = S.logs[ui.sel].filter(function (x) { return x.id !== w.id; }); cleanDays(); commit();
+      if (w) {
+        var delName = w.name;
+        askConfirm({ title: 'מחיקת אימון', text: 'למחוק את "' + delName + '"? אי אפשר לבטל.', ok: 'מחיקה' }).then(function (yes) {
+          if (!yes) return;
+          S.logs[ui.sel] = (S.logs[ui.sel] || []).filter(function (x) { return x.id !== w.id; });
+          cleanDays(); commit(); toast('האימון נמחק');
+        });
       }
       break;
     case 'toggleW': w = findW(b.dataset.w); if (w) { w.done = !w.done; if (w.done) { delete ui.doneOpen[w.id]; checkMilestone(); } commit(); if (w.done && !ui.celebrate) toast('כל הכבוד! האימון סומן כבוצע'); } break;
     case 'toggleDone': ui.doneOpen[b.dataset.w] = !ui.doneOpen[b.dataset.w]; render(); break;
-    case 'delEx': w = findW(b.dataset.w); if (w) { w.ex = w.ex.filter(function (x) { return x.id !== b.dataset.e; }); commit(); } break;
+    case 'delEx':
+      w = findW(b.dataset.w);
+      e = findE(w, b.dataset.e);
+      if (w && e) {
+        askConfirm({ title: 'הסרת תרגיל', text: 'להסיר את "' + e.name + '" מהאימון?', ok: 'הסרה' }).then(function (yes) {
+          if (!yes) return;
+          w.ex = w.ex.filter(function (x) { return x.id !== e.id; });
+          commit(); toast('התרגיל הוסר');
+        });
+      }
+      break;
     case 'inc': e = findE(findW(b.dataset.w), b.dataset.e); if (e) { if (!Array.isArray(e.warm)) e.warm = []; e.sets.push(e.sets.length ? e.sets[e.sets.length - 1] : '10'); e.warm.push(false); commit(); } break;
     case 'dec': e = findE(findW(b.dataset.w), b.dataset.e); if (e && e.sets.length > 1) { e.sets.pop(); if (Array.isArray(e.warm)) e.warm.pop(); commit(); } break;
     case 'toggleWarm':
@@ -1057,11 +1113,25 @@ document.addEventListener('click', function (ev) {
     case 'addFromLib': addExercise(b.dataset.n); break;
     case 'libCat': ui.libCat = b.dataset.c;
       var keepName = document.getElementById('libName').value; render(); document.getElementById('libName').value = keepName; break;
-    case 'delLib': S.library = S.library.filter(function (l) { return l.id !== b.dataset.id; }); commit(); break;
+    case 'delLib':
+      var libItem = S.library.filter(function (l) { return l.id === b.dataset.id; })[0];
+      if (libItem) {
+        askConfirm({ title: 'מחיקה מהתפריט', text: 'למחוק את "' + libItem.name + '" מהתפריט השמור?', ok: 'מחיקה' }).then(function (yes) {
+          if (!yes) return;
+          S.library = S.library.filter(function (l) { return l.id !== libItem.id; });
+          commit(); toast('נמחק מהתפריט');
+        });
+      }
+      break;
     case 'preview': ui.celebrate = +b.dataset.m; render(); break;
     case 'closeCeleb': ui.celebrate = null; render(); break;
     case 'coachChip': askCoach(b.dataset.q); break;
-    case 'coachClear': S.chat = []; commit(); break;
+    case 'coachClear':
+      askConfirm({ title: 'ניקוי השיחה', text: 'למחוק את כל השיחה עם המאמן?', ok: 'ניקוי' }).then(function (yes) {
+        if (!yes) return;
+        S.chat = []; commit(); toast('השיחה נוקתה');
+      });
+      break;
     case 'coachAdd':
       var msg = S.chat[+b.dataset.m], x = msg && msg.ex && msg.ex[+b.dataset.j];
       if (x && !S.library.some(function (l) { return l.name === x.name; })) {
@@ -1080,10 +1150,16 @@ document.addEventListener('click', function (ev) {
     case 'export': doExport(); break;
     case 'shareExport': doShare(); break;
     case 'import': document.getElementById('importFile').click(); break;
+    case 'confirmOk': settleConfirm(true); break;
+    case 'confirmCancel': settleConfirm(false); break;
     case 'resetAll':
-      if (confirm('למחוק את כל האימונים, התפריט והשיחות? אי אפשר לבטל. כדאי לייצא גיבוי קודם.')) {
-        var keep = S.settings; S = freshData(); S.settings = keep; commit(); toast('הנתונים נמחקו');
-      }
+      askConfirm({ title: 'מחיקת כל הנתונים', text: 'כל האימונים, התפריט והשיחות יימחקו מהמכשיר. אי אפשר לבטל.', ok: 'המשך' }).then(function (yes) {
+        if (!yes) return;
+        askConfirm({ title: 'בטוחה?', text: 'אחרי המחיקה אין דרך לשחזר בלי קובץ גיבוי. כדאי לייצא גיבוי קודם.', ok: 'כן, למחוק הכל' }).then(function (yes2) {
+          if (!yes2) return;
+          var keep = S.settings; S = freshData(); S.settings = keep; commit(); toast('הנתונים נמחקו');
+        });
+      });
       break;
   }
 });
@@ -1111,7 +1187,11 @@ document.addEventListener('submit', function (ev) {
 
 document.addEventListener('keydown', function (ev) {
   if (ev.key === 'Enter' && ev.target.id === 'newName') { ev.preventDefault(); document.querySelector('[data-a="createWorkout"]').click(); }
-  if (ev.key === 'Escape') { if (ui.celebrate) { ui.celebrate = null; render(); } else if (ui.sheetFor) { ui.sheetFor = null; render(); } }
+  if (ev.key === 'Escape') {
+    if (ui.confirm) settleConfirm(false);
+    else if (ui.celebrate) { ui.celebrate = null; render(); }
+    else if (ui.sheetFor) { ui.sheetFor = null; render(); }
+  }
 });
 
 document.addEventListener('change', function (ev) {
