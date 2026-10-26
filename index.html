@@ -180,7 +180,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.9.0';
+var VERSION = '1.10.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -444,7 +444,7 @@ function vHome() {
   var pct = streak >= 365 ? 100 : Math.round((streak - prevM) / (next - prevM) * 100);
   var heroT = streak === 0 ? 'בואי נדליק את האש' : (streak === 1 ? 'יום אחד ברצף' : streak + ' ימים ברצף');
   var left = next - streak;
-  var heroS = streak >= 365 ? 'שנה שלמה. אין עלייך.' : 'עוד ' + (left === 1 ? 'יום אחד' : left + ' ימים') + ' להתראת ' + next;
+  var heroS = streak >= 365 ? 'שנה שלמה. אין עלייך.' : 'עוד ' + (left === 1 ? 'יום אחד' : left + ' ימים') + ' לרצף של ' + next + ' ימים';
 
   var sd = fromKey(ui.sel);
   var dayTitle = ui.sel === tk ? 'האימונים של היום' : ui.sel === dkey(addDays(now, -1)) ? 'האימונים של אתמול' : ui.sel === dkey(addDays(now, 1)) ? 'האימונים של מחר' : 'האימונים ביום ' + DAY_NAMES[sd.getDay()];
@@ -578,17 +578,17 @@ function vStreak() {
       '<span style="position:relative;font-size:64px;font-weight:800;line-height:1">' + streak + '</span>' +
       '<span style="position:relative;font-size:16px;color:#D9C8B8">ימים ברצף</span>' +
       '<span style="position:relative;margin-top:10px;height:30px;padding:0 14px;border-radius:15px;background:rgba(251,245,239,.1);font-size:13px;display:flex;align-items:center">השיא שלך: ' + best + ' ימים</span></div>' +
-    '<h2 class="h2">התראות אש בדרך</h2><div class="stack g10">' +
+    '<h2 class="h2">רצפים בדרך</h2><div class="stack g10">' +
     MILESTONES.map(function (m) {
       var got = best >= m, pct = got ? 100 : Math.round(streak / m * 100);
-      return '<button class="mile' + (got ? ' got' : '') + '" data-a="preview" data-m="' + m + '" aria-label="התראת ' + m + ' ימים, תצוגה מקדימה">' +
+      return '<button class="mile' + (got ? ' got' : '') + '" data-a="preview" data-m="' + m + '" aria-label="רצף של ' + m + ' ימים, תצוגה מקדימה">' +
         '<span class="mbadge">' + (got ? flame(28) : flame(28, '#CDBBA8', '#E6D6C6')) + '</span>' +
         '<span class="stack grow g6"><span class="row between g8" style="align-items:baseline"><span style="font-size:17px;font-weight:700">' + m + ' ימים</span>' +
         '<span style="font-size:13px;font-weight:600;color:' + (got ? 'var(--fire-text)' : 'var(--muted)') + '">' + (got ? 'הושג' : 'עוד ' + (m - streak) + ' ימים') + '</span></span>' +
         '<span class="mbar"><span style="width:' + pct + '%"></span></span></span></button>';
     }).join('') + '</div>' +
     '<div class="card row g12" style="padding:12px 16px"><img src="' + IMG.yoga + '" alt="" style="width:70px;height:80px;object-fit:contain;flex-shrink:0">' +
-      '<span class="muted grow" style="font-size:14px;line-height:1.45">רצף נספר מכל יום שבו סימנת אימון כבוצע. לחיצה על אבן דרך מראה את ההתראה שלה.</span></div>' +
+      '<span class="muted grow" style="font-size:14px;line-height:1.45">רצף נספר מכל יום שבו סימנת אימון כבוצע. לחיצה על אבן דרך מציגה תצוגה מקדימה.</span></div>' +
   '</div>';
 }
 
@@ -678,7 +678,7 @@ function vLayer() {
   }
   var c = ui.celebrate;
   if (c) {
-    html += '<div class="celeb" role="dialog" aria-modal="true" aria-label="התראת רצף"><div class="box">' +
+    html += '<div class="celeb" role="dialog" aria-modal="true" aria-label="חגיגת רצף"><div class="box">' +
       '<div style="position:relative;width:210px;height:210px;display:flex;align-items:center;justify-content:center"><span class="glow" style="inset:10px"></span>' +
       '<img src="' + (c >= 50 ? IMG.trophy : IMG.fire) + '" alt="" style="position:relative;width:200px;height:200px;object-fit:contain"></div>' +
       '<span class="row g6" style="font-size:56px;font-weight:800;line-height:1"><span style="display:inline-flex;animation:flick 1s ease-in-out infinite">' + flame(44) + '</span>' + c + '</span>' +
