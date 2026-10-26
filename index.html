@@ -55,7 +55,22 @@ h1,h2,h3{margin:0}
 .avatar{width:56px;height:56px;border-radius:50%;background:var(--pink-soft);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;flex-shrink:0}
 .avatar img{width:62px;height:62px;object-fit:cover;object-position:top;margin-bottom:-6px}
 .avatar-logo{background:#fff;box-shadow:0 0 0 1px var(--line)}
-.avatar-logo img{width:100%;height:100%;object-fit:cover;object-position:center;margin-bottom:0}
+.avatar-logo img{width:100%;height:100%;object-fit:cover;object-position:center;margin-bottom:0;transform:scale(1.04)}
+/* avatar picker carousel */
+.avp{position:fixed;inset:0;z-index:56;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(46,31,22,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.avp .scrim{position:absolute;inset:0;border:none;background:transparent}
+.avp-box{position:relative;width:100%;max-width:420px;background:var(--bg);border-radius:28px;padding:22px 0 18px;display:flex;flex-direction:column;gap:10px;text-align:center;animation:pop .32s cubic-bezier(.2,.9,.3,1.2)}
+.avp-box h2,.avp-box>span{padding:0 22px}
+.av-strip{position:relative;display:flex;gap:14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;padding:12px calc(50% - 68px);scrollbar-width:none}
+.av-strip::-webkit-scrollbar{display:none}
+.av-item{flex:0 0 auto;width:136px;height:136px;border-radius:50%;border:none;background:#fff;padding:0;overflow:hidden;scroll-snap-align:center;opacity:.5;transform:scale(.9);transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .3s ease,box-shadow .3s ease}
+.av-item img{width:100%;height:100%;object-fit:cover;display:block}
+.av-item.on{opacity:1;transform:scale(1);box-shadow:0 0 0 3px var(--pink),0 12px 28px rgba(200,50,95,.32)}
+.av-dots{display:flex;gap:6px;justify-content:center}
+.av-dot{width:6px;height:6px;border-radius:3px;background:var(--line);transition:all .25s ease}
+.av-dot.on{background:var(--pink);width:18px}
+.avp-box .acts{display:flex;gap:10px;padding:0 22px;margin-top:6px}
+.avp-box .acts .btn{flex:1;height:46px;border-radius:23px}
 .streak-pill{height:44px;padding:0 16px;border-radius:22px;border:none;background:#fff;box-shadow:0 2px 10px rgba(46,31,22,.08);display:flex;align-items:center;gap:6px;font-size:17px;font-weight:700}
 
 /* week */
@@ -261,7 +276,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.14.0';
+var VERSION = '1.15.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -286,6 +301,8 @@ var DEFAULT_LIB = [
   ['פולי עליון','גב'],['לחיצת כתפיים','כתפיים'],['הרחקה לצדדים','כתפיים'],['כפיפת מרפקים','ידיים'],
   ['פשיטת מרפקים','ידיים'],['פלאנק','בטן'],['כפיפות בטן','בטן'],['קפיצה בחבל','קרדיו']
 ];
+var AVATAR_COUNT = 6;
+function avatarSrc(i) { return 'avatars/' + i + '.png'; }
 var DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash';
 var OLD_MODEL = 'claude-sonnet-5-5';
 var DEFAULT_EFFORT = 'high';
@@ -322,6 +339,7 @@ function dkey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + 
 function addDays(d, n) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; }
 function fromKey(k) { var p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
 function mkEx(name, reps) { return { id: uid(), name: name, sets: reps.map(String), warm: reps.map(function () { return false; }) }; }
+function currentAvatar() { var a = S.settings.avatar; return (a >= 1 && a <= AVATAR_COUNT) ? avatarSrc(a) : 'logo.png'; }
 function isDoneDay(k) { return (S.logs[k] || []).some(function (w) { return w.done; }); }
 function streakNow() {
   var d = new Date();
@@ -341,7 +359,7 @@ function plural(n, one, many) { return n === 1 ? one : n + ' ' + many; }
 
 /* ---------- state ---------- */
 function freshData() {
-  return { logs: {}, library: defaultLibrary(), seen: [], chat: [], settings: { apiKey: '', model: DEFAULT_MODEL, effort: DEFAULT_EFFORT }, lastBackup: null };
+  return { logs: {}, library: defaultLibrary(), seen: [], chat: [], settings: { apiKey: '', model: DEFAULT_MODEL, effort: DEFAULT_EFFORT, avatar: null, avatarSeen: false }, lastBackup: null };
 }
 function normalizeWarm(logs) {
   Object.keys(logs || {}).forEach(function (k) {
@@ -363,6 +381,9 @@ function normalize(d) {
   if (!st.model || st.model === OLD_MODEL) st.model = DEFAULT_MODEL;
   if (st.apiKey && st.apiKey.indexOf('sk-ant-') === 0) st.apiKey = '';
   if (!EFFORTS.some(function (x) { return x[0] === st.effort; })) st.effort = DEFAULT_EFFORT;
+  var av = parseInt(st.avatar, 10);
+  st.avatar = (av >= 1 && av <= AVATAR_COUNT) ? av : null;
+  st.avatarSeen = !!st.avatarSeen;
   return {
     logs: normalizeWarm(d.logs && typeof d.logs === 'object' ? d.logs : f.logs),
     library: Array.isArray(d.library) ? d.library : f.library,
@@ -383,7 +404,7 @@ function save() {
 var S = load();
 save(); /* persist any migration from a previous version */
 var today0 = dkey(new Date());
-var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {}, confirm: null };
+var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {}, confirm: null, picker: null };
 
 /* ---------- toast ---------- */
 var toastTimer;
@@ -535,7 +556,7 @@ function vHome() {
   var html = '' +
   '<div class="stack g22">' +
     '<header class="row between g12">' +
-      '<div class="row g12"><div class="avatar avatar-logo"><img src="logo.png" alt="Hakuna Matata"></div>' +
+      '<div class="row g12"><div class="avatar avatar-logo"><img src="' + currentAvatar() + '" alt=""></div>' +
         '<div class="stack" style="gap:2px"><span class="muted" style="font-size:14px">' + greeting + ',</span><span style="font-size:22px;font-weight:700">טל</span></div></div>' +
       '<button class="streak-pill" data-a="tab" data-t="streak" aria-label="הרצף שלי: ' + streak + ' ימים">' + flame(20) + streak + '</button>' +
     '</header>' +
@@ -682,6 +703,14 @@ function vSettings() {
   return '<div class="stack g20">' +
     '<div class="row g14"><img src="' + IMG.icon + '" alt="" style="width:76px;height:76px;border-radius:18px;box-shadow:0 0 0 1px rgba(46,31,22,.08)">' +
       '<div class="stack g4"><h1 class="h1" dir="ltr" style="text-align:right">' + APP + '</h1><span class="muted" style="font-size:14px">הגדרות וגיבוי</span></div></div>' +
+
+    '<section class="card stack g14" aria-labelledby="pvh">' +
+      '<div class="row g14">' +
+        '<div class="avatar avatar-logo"><img src="' + currentAvatar() + '" alt=""></div>' +
+        '<div class="stack g4 grow"><h2 class="h2" id="pvh">תמונת פרופיל</h2>' +
+        '<span class="muted" style="font-size:14px">' + (S.settings.avatar ? 'הפרצוף שבחרת' : 'עוד לא בחרת פרצוף') + '</span></div></div>' +
+      '<button class="btn btn-ghost" data-a="openAvatar">' + ic(P.spark, 20, 2.2) + 'בחירת תמונה</button>' +
+    '</section>' +
 
     '<section class="card stack g14" aria-labelledby="bk">' +
       '<div class="stack g4"><h2 class="h2" id="bk">גיבוי הנתונים</h2>' +
@@ -892,6 +921,21 @@ function vLayer() {
         '</div>' +
       '</div></div>';
   }
+  var pk = ui.picker;
+  if (pk) {
+    html += '<div class="avp" role="dialog" aria-modal="true" aria-label="בחירת תמונת פרופיל">' +
+      '<button class="scrim" data-a="avatarCancel" aria-label="ביטול"></button>' +
+      '<div class="avp-box">' +
+        '<h2 class="h2">בחירת תמונת פרופיל</h2>' +
+        '<span class="muted" style="font-size:14px">גללי בין הפרצופים ובחרי את זה שמתאים לך.</span>' +
+        '<div class="av-strip" id="avStrip" dir="ltr">' + avatarItems() + '</div>' +
+        '<div class="av-dots" id="avDots" dir="ltr">' + avatarDots(pk.index) + '</div>' +
+        '<div class="acts">' +
+          '<button class="btn btn-ghost" data-a="avatarCancel">ביטול</button>' +
+          '<button class="btn btn-pink" data-a="avatarSave">אישור</button>' +
+        '</div>' +
+      '</div></div>';
+  }
   return html;
 }
 
@@ -906,6 +950,7 @@ function render() {
   var m = document.getElementById('msgs'); if (m) m.scrollTop = m.scrollHeight;
   if (ui.celebrate) { var b = document.getElementById('celebBtn'); if (b) b.focus(); }
   if (ui.confirm) { var cc = document.getElementById('cfCancel'); if (cc) cc.focus(); }
+  if (ui.picker) initAvatarPicker();
 }
 
 /* ---------- styled confirm ---------- */
@@ -920,6 +965,67 @@ function settleConfirm(yes) {
   ui.confirm = null;
   render();
   if (c) c.resolve(yes);
+}
+
+/* ---------- avatar picker (carousel) ---------- */
+function avatarItems() {
+  var out = '';
+  for (var i = 1; i <= AVATAR_COUNT; i++) {
+    out += '<button class="av-item" type="button" data-a="avatarPick" data-i="' + i + '" aria-label="פרצוף ' + i + '">' +
+      '<img src="' + avatarSrc(i) + '" alt="" draggable="false"></button>';
+  }
+  return out;
+}
+function avatarDots(sel) {
+  var out = '';
+  for (var i = 1; i <= AVATAR_COUNT; i++) out += '<span class="av-dot' + (i === sel ? ' on' : '') + '"></span>';
+  return out;
+}
+function centeredAvatar(strip) {
+  var items = strip.querySelectorAll('.av-item');
+  var mid = strip.getBoundingClientRect().left + strip.clientWidth / 2;
+  var best = 1, bestD = Infinity;
+  [].forEach.call(items, function (el, i) {
+    var r = el.getBoundingClientRect();
+    var d = Math.abs(r.left + r.width / 2 - mid);
+    if (d < bestD) { bestD = d; best = i + 1; }
+  });
+  return best;
+}
+function centerAvatar(idx, smooth) {
+  var strip = document.getElementById('avStrip');
+  if (!strip) return;
+  var el = strip.querySelector('.av-item[data-i="' + idx + '"]');
+  if (!el) return;
+  var target = el.offsetLeft + el.offsetWidth / 2 - strip.clientWidth / 2;
+  try { strip.scrollTo({ left: target, behavior: smooth ? 'smooth' : 'auto' }); }
+  catch (e) { strip.scrollLeft = target; }
+}
+function syncAvatarUI(idx) {
+  var strip = document.getElementById('avStrip');
+  if (strip) [].forEach.call(strip.querySelectorAll('.av-item'), function (el) {
+    el.classList.toggle('on', +el.dataset.i === idx);
+  });
+  var dots = document.getElementById('avDots');
+  if (dots) [].forEach.call(dots.children, function (d, i) { d.classList.toggle('on', i + 1 === idx); });
+}
+function initAvatarPicker() {
+  var strip = document.getElementById('avStrip');
+  if (!strip || !ui.picker) return;
+  centerAvatar(ui.picker.index, false);
+  syncAvatarUI(ui.picker.index);
+  strip.addEventListener('scroll', function () {
+    clearTimeout(strip._snapT);
+    strip._snapT = setTimeout(function () {
+      if (!ui.picker) return;
+      var i = centeredAvatar(strip);
+      if (i !== ui.picker.index) { ui.picker.index = i; syncAvatarUI(i); }
+    }, 70);
+  }, { passive: true });
+}
+function openAvatarPicker() {
+  ui.picker = { index: S.settings.avatar || 1 };
+  render();
 }
 
 /* ---------- data actions ---------- */
@@ -1152,6 +1258,20 @@ document.addEventListener('click', function (ev) {
     case 'import': document.getElementById('importFile').click(); break;
     case 'confirmOk': settleConfirm(true); break;
     case 'confirmCancel': settleConfirm(false); break;
+    case 'openAvatar': openAvatarPicker(); break;
+    case 'avatarPick':
+      ui.picker.index = +b.dataset.i;
+      centerAvatar(ui.picker.index, true);
+      syncAvatarUI(ui.picker.index);
+      break;
+    case 'avatarSave':
+      S.settings.avatar = ui.picker.index; S.settings.avatarSeen = true; ui.picker = null;
+      commit(); toast('תמונת הפרופיל נשמרה');
+      break;
+    case 'avatarCancel':
+      S.settings.avatarSeen = true; ui.picker = null;
+      commit();
+      break;
     case 'resetAll':
       askConfirm({ title: 'מחיקת כל הנתונים', text: 'כל האימונים, התפריט והשיחות יימחקו מהמכשיר. אי אפשר לבטל.', ok: 'המשך' }).then(function (yes) {
         if (!yes) return;
@@ -1189,6 +1309,7 @@ document.addEventListener('keydown', function (ev) {
   if (ev.key === 'Enter' && ev.target.id === 'newName') { ev.preventDefault(); document.querySelector('[data-a="createWorkout"]').click(); }
   if (ev.key === 'Escape') {
     if (ui.confirm) settleConfirm(false);
+    else if (ui.picker) { S.settings.avatarSeen = true; ui.picker = null; commit(); }
     else if (ui.celebrate) { ui.celebrate = null; render(); }
     else if (ui.sheetFor) { ui.sheetFor = null; render(); }
   }
@@ -1345,6 +1466,9 @@ document.addEventListener('wheel', function (ev) {
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'visible' && dkey(new Date()) !== today0) { today0 = dkey(new Date()); ui.sel = today0; ui.weekOffset = 0; render(); }
 });
+
+/* first entry: ask for a profile picture */
+if (!S.settings.avatarSeen) ui.picker = { index: S.settings.avatar || 1 };
 
 render();
 })();
