@@ -151,14 +151,20 @@ body.kb .nav{opacity:0;visibility:hidden;pointer-events:none;transform:translate
 .nav::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:2;pointer-events:none;opacity:.04;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 /* the glass lens that slides between tabs */
-.nav-lens{position:absolute;left:0;top:6px;bottom:6px;border-radius:26px;z-index:0;pointer-events:none;
+.nav-lens{position:absolute;left:0;top:6px;bottom:6px;border-radius:26px;z-index:0;pointer-events:none;overflow:hidden;will-change:transform;
   background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 58%),var(--pink);
   box-shadow:0 6px 18px rgba(200,50,95,.42),inset 0 1px 0 rgba(255,255,255,.6),inset 0 -2px 7px rgba(120,15,50,.32);
   transition:transform .45s cubic-bezier(.16,1,.3,1),width .45s cubic-bezier(.16,1,.3,1)}
-.nav-lens::after{content:"";position:absolute;inset:0;border-radius:inherit;overflow:hidden;
+.nav-lens::after{content:"";position:absolute;inset:0;border-radius:inherit;
   background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.5) 50%,transparent 68%);transform:translateX(-140%)}
 .nav-lens.sweep::after{animation:navSweep .6s cubic-bezier(.3,0,.2,1)}
 @keyframes navSweep{from{transform:translateX(-140%)}to{transform:translateX(140%)}}
+/* the specular reflection that lags behind the drag */
+.nav-lens .glint{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(46% 74% at 50% 16%,rgba(255,255,255,.95),rgba(255,255,255,0) 72%);
+  transform:translateX(var(--glint,0px));opacity:.7;transition:opacity .2s ease}
+.nav-lens.dragging{transition:none;box-shadow:0 10px 26px rgba(200,50,95,.5),inset 0 1px 0 rgba(255,255,255,.75),inset 0 -2px 8px rgba(120,15,50,.3)}
+.nav-lens.dragging .glint{opacity:1}
 .nav-btns{display:contents}
 .nav button{position:relative;z-index:1;height:52px;min-width:52px;padding:0 14px;border-radius:26px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;transition:color .25s ease}
 .nav button.on{color:#fff;padding:0 18px}
@@ -199,7 +205,7 @@ body.kb .nav{opacity:0;visibility:hidden;pointer-events:none;transform:translate
 </head>
 <body>
 <main class="app" id="screen" aria-live="polite"></main>
-<nav class="nav" id="nav" aria-label="ניווט ראשי"><span class="nav-lens" aria-hidden="true"></span><span class="nav-btns" id="navBtns"></span></nav>
+<nav class="nav" id="nav" aria-label="ניווט ראשי"><span class="nav-lens" aria-hidden="true"><span class="glint"></span></span><span class="nav-btns" id="navBtns"></span></nav>
 <div id="layer"></div>
 <input type="file" id="importFile" accept="application/json,.json" class="sr" aria-hidden="true" tabindex="-1">
 
@@ -215,7 +221,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.11.0';
+var VERSION = '1.12.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -695,6 +701,7 @@ function positionNavLens() {
   var x = Math.round(ob.left - nb.left - nav.clientLeft);
   lens.style.transform = 'translateX(' + x + 'px)';
   lens.style.width = ob.width + 'px';
+  lens.style.setProperty('--glint', '0px');
   var changed = navLensTab !== ui.tab;
   navLensTab = ui.tab;
   if (!navLensReady) {
@@ -711,6 +718,88 @@ function positionNavLens() {
 }
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(positionNavLens);
 window.addEventListener('resize', function () { positionNavLens(); });
+
+/* drag the glass bubble along the bar with your finger */
+var navDrag = { on: false, startX: 0, baseX: 0, dx: 0, moved: false, minX: 0, maxX: 0, w: 0, targets: null };
+function navLensX(lens) {
+  var m = lens.style.transform.match(/translateX\(([-\d.]+)px\)/);
+  return m ? parseFloat(m[1]) : 0;
+}
+function navDragStart(clientX) {
+  var nav = document.getElementById('nav');
+  var lens = nav && nav.querySelector('.nav-lens');
+  if (!nav || !lens) return false;
+  var nb = nav.getBoundingClientRect(), off = nav.clientLeft;
+  var targets = [].map.call(nav.querySelectorAll('#navBtns button'), function (b) {
+    var r = b.getBoundingClientRect();
+    return { tab: b.dataset.t, x: r.left - nb.left - off, w: r.width };
+  });
+  if (targets.length < 2) return false;
+  var xs = targets.map(function (t) { return t.x; });
+  navDrag.on = true; navDrag.moved = false; navDrag.dx = 0;
+  navDrag.startX = clientX;
+  navDrag.baseX = navLensX(lens);
+  navDrag.w = lens.getBoundingClientRect().width;
+  navDrag.targets = targets;
+  navDrag.minX = Math.min.apply(null, xs);
+  navDrag.maxX = Math.max.apply(null, xs);
+  lens.classList.add('dragging');
+  return true;
+}
+function navDragMove(clientX) {
+  if (!navDrag.on) return;
+  var nav = document.getElementById('nav');
+  var lens = nav && nav.querySelector('.nav-lens');
+  if (!lens) return;
+  var dx = clientX - navDrag.startX;
+  navDrag.dx = dx;
+  if (Math.abs(dx) > 5) navDrag.moved = true;
+  var x = navDrag.baseX + dx;
+  if (x < navDrag.minX) x = navDrag.minX + (x - navDrag.minX) * 0.35;
+  if (x > navDrag.maxX) x = navDrag.maxX + (x - navDrag.maxX) * 0.35;
+  lens.style.transform = 'translateX(' + x + 'px)';
+  lens.style.setProperty('--glint', Math.max(-18, Math.min(18, -dx * 0.4)) + 'px');
+}
+function navDragEnd() {
+  if (!navDrag.on) return;
+  navDrag.on = false;
+  var nav = document.getElementById('nav');
+  var lens = nav && nav.querySelector('.nav-lens');
+  if (!lens) return;
+  lens.classList.remove('dragging');
+  lens.style.setProperty('--glint', '0px');
+  if (!navDrag.moved) { positionNavLens(); return; }
+  var cx = navLensX(lens) + navDrag.w / 2, best = navDrag.targets[0], bestD = Infinity;
+  navDrag.targets.forEach(function (t) {
+    var d = Math.abs(t.x + t.w / 2 - cx);
+    if (d < bestD) { bestD = d; best = t; }
+  });
+  suppressClickUntil = Date.now() + 400;
+  if (best.tab !== ui.tab) {
+    ui.tab = best.tab; ui.sheetFor = null; render(); window.scrollTo(0, 0);
+  } else {
+    positionNavLens();
+  }
+}
+document.addEventListener('touchstart', function (ev) {
+  if (ev.touches.length !== 1) return;
+  var nav = document.getElementById('nav');
+  if (nav && nav.contains(ev.target)) navDragStart(ev.touches[0].clientX);
+}, { passive: true });
+document.addEventListener('touchmove', function (ev) {
+  if (!navDrag.on || !ev.touches[0]) return;
+  if (ev.cancelable) ev.preventDefault();
+  navDragMove(ev.touches[0].clientX);
+}, { passive: false });
+document.addEventListener('touchend', function () { if (navDrag.on) navDragEnd(); }, { passive: true });
+document.addEventListener('touchcancel', function () { if (navDrag.on) navDragEnd(); }, { passive: true });
+document.addEventListener('mousedown', function (ev) {
+  if (ev.button !== 0) return;
+  var nav = document.getElementById('nav');
+  if (nav && nav.contains(ev.target)) navDragStart(ev.clientX);
+});
+document.addEventListener('mousemove', function (ev) { if (navDrag.on) navDragMove(ev.clientX); });
+document.addEventListener('mouseup', function () { if (navDrag.on) navDragEnd(); });
 
 function sheetListHtml() {
   var q = ui.search.trim();
