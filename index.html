@@ -85,6 +85,9 @@ h1,h2,h3{margin:0}
 .workout.done{border-color:var(--ink)}
 .wbadge{width:48px;height:48px;border-radius:16px;background:var(--pink-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .workout.done .wbadge{background:var(--ink)}
+.whead{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:none;background:transparent;padding:0;text-align:right}
+.wchev{display:inline-flex;color:var(--muted);transition:transform .22s ease;flex-shrink:0}
+.workout.open .wchev{transform:rotate(180deg)}
 .ex{background:var(--bg);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px}
 .stepper{display:flex;align-items:center;gap:4px;background:#fff;border-radius:22px;padding:3px}
 .stepper button{width:38px;height:38px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center}
@@ -172,7 +175,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.4.0';
+var VERSION = '1.5.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -221,7 +224,8 @@ var P = {
   share: '<path d="M12 3v12M8 7l4-4 4 4"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path>',
   spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path>',
   key: '<circle cx="8" cy="15" r="4"></circle><path d="M11 12l9-9M17 6l3 3M15 8l2 2"></path>',
-  refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.4"></path><path d="M21 4v5h-5"></path>'
+  refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.4"></path><path d="M21 4v5h-5"></path>',
+  chev: '<path d="M6 9.5l6 6 6-6"></path>'
 };
 
 /* ---------- helpers ---------- */
@@ -280,7 +284,7 @@ function save() {
 var S = load();
 save(); /* persist any migration from a previous version */
 var today0 = dkey(new Date());
-var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '' };
+var ui = { tab: 'home', sel: today0, weekOffset: 0, newOpen: false, sheetFor: null, search: '', libCat: 'רגליים', celebrate: null, busy: false, checking: false, updateMsg: '', updateMsgColor: '', doneOpen: {} };
 
 /* ---------- toast ---------- */
 var toastTimer;
@@ -400,10 +404,18 @@ function vHome() {
 
   list.forEach(function (w) {
     var totalSets = w.ex.reduce(function (a, e) { return a + e.sets.length; }, 0);
-    html += '<article class="card workout stack g14' + (w.done ? ' done' : '') + '">' +
-      '<div class="row g12"><div class="wbadge">' + (w.done ? ic(P.check, 24, 3, '#fff') : ic(P.dumbbell, 24, 2.2, '#C8325F')) + '</div>' +
-        '<div class="stack grow" style="gap:2px"><h3 style="font-size:18px;font-weight:700">' + esc(w.name) + '</h3><span class="muted" style="font-size:13px">' + w.ex.length + ' תרגילים · ' + totalSets + ' סטים</span></div>' +
-        '<button class="icon-btn" data-a="delW" data-w="' + w.id + '" aria-label="מחיקת האימון ' + esc(w.name) + '">' + ic(P.trash, 18, 2) + '</button></div>';
+    var open = !w.done || !!ui.doneOpen[w.id];
+    var head = '<div class="wbadge">' + (w.done ? ic(P.check, 24, 3, '#fff') : ic(P.dumbbell, 24, 2.2, '#C8325F')) + '</div>' +
+      '<div class="stack grow" style="gap:2px"><h3 style="font-size:18px;font-weight:700">' + esc(w.name) + '</h3><span class="muted" style="font-size:13px">' + w.ex.length + ' תרגילים · ' + totalSets + ' סטים</span></div>';
+    html += '<article class="card workout' + (open ? ' stack g14' : '') + (w.done ? ' done' : '') + (w.done && open ? ' open' : '') + '">' +
+      '<div class="row g12">' +
+        (w.done
+          ? '<button class="whead" data-a="toggleDone" data-w="' + w.id + '" aria-expanded="' + open + '" aria-label="' + (open ? 'סגירת' : 'פתיחת') + ' הפרטים של האימון ' + esc(w.name) + '">' + head +
+            '<span class="wchev">' + ic(P.chev, 18, 2.4) + '</span></button>'
+          : head) +
+        (open ? '<button class="icon-btn" data-a="delW" data-w="' + w.id + '" aria-label="מחיקת האימון ' + esc(w.name) + '">' + ic(P.trash, 18, 2) + '</button>' : '') +
+      '</div>';
+    if (!open) { html += '</article>'; return; }
     w.ex.forEach(function (e) {
       html += '<div class="ex"><div class="row between g8"><span style="font-size:16px;font-weight:600">' + esc(e.name) + '</span>' +
         '<button class="icon-btn" style="width:32px;height:32px;background:transparent" data-a="delEx" data-w="' + w.id + '" data-e="' + e.id + '" aria-label="הסרת ' + esc(e.name) + '">' + ic(P.x, 16, 2.4) + '</button></div>' +
@@ -761,7 +773,8 @@ document.addEventListener('click', function (ev) {
         S.logs[ui.sel] = S.logs[ui.sel].filter(function (x) { return x.id !== w.id; }); cleanDays(); commit();
       }
       break;
-    case 'toggleW': w = findW(b.dataset.w); if (w) { w.done = !w.done; if (w.done) checkMilestone(); commit(); if (w.done && !ui.celebrate) toast('כל הכבוד! האימון סומן כבוצע'); } break;
+    case 'toggleW': w = findW(b.dataset.w); if (w) { w.done = !w.done; if (w.done) { delete ui.doneOpen[w.id]; checkMilestone(); } commit(); if (w.done && !ui.celebrate) toast('כל הכבוד! האימון סומן כבוצע'); } break;
+    case 'toggleDone': ui.doneOpen[b.dataset.w] = !ui.doneOpen[b.dataset.w]; render(); break;
     case 'delEx': w = findW(b.dataset.w); if (w) { w.ex = w.ex.filter(function (x) { return x.id !== b.dataset.e; }); commit(); } break;
     case 'inc': e = findE(findW(b.dataset.w), b.dataset.e); if (e) { e.sets.push(e.sets.length ? e.sets[e.sets.length - 1] : '10'); commit(); } break;
     case 'dec': e = findE(findW(b.dataset.w), b.dataset.e); if (e && e.sets.length > 1) { e.sets.pop(); commit(); } break;
