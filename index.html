@@ -317,7 +317,7 @@ var IMG = {
 
 /* ---------- constants ---------- */
 var APP = 'Hakuna Matata';
-var VERSION = '1.19.0';
+var VERSION = '1.20.0';
 var REPO_URL = 'https://github.com/talshor-git/hakuna-matata-fitness';
 var STORE_KEY = 'hakuna-matata-v1';
 var DAY_LETTERS = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
@@ -364,6 +364,7 @@ var P = {
   gear: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path>',
   search: '<circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path>',
   send: '<path d="M20 4L3 11l7 2 2 7 8-16z"></path><path d="M10 13l4-4"></path>',
+  newChat: '<path d="M4 4h16a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 20 16h-2.5v3.5L13 16H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 4z"></path><path d="M12 7.4v5.2M9.4 10h5.2"></path>',
   expand: '<path d="M14 2h8v8z" fill="currentColor"></path><path d="M10 22H2v-8z" fill="currentColor"></path>',
   collapse: '<path d="M14 2v8h8z" fill="currentColor"></path><path d="M10 22v-8H2z" fill="currentColor"></path>',
   down: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>', up: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"></path>',
@@ -721,7 +722,7 @@ function vCoach() {
       '<h2 style="font-size:20px;font-weight:700">מאמן הכושר שלי</h2><span style="font-size:13px;color:#D9C8B8">תרגילים, אזורים בגוף, טכניקה ותכנון אימונים</span></div>' +
       '<span class="row g6">' +
         '<button class="icon-btn" style="background:rgba(251,245,239,.1);color:var(--on-strong)" data-a="coachFull" aria-label="' + fullLbl + '" aria-pressed="' + ui.coachFull + '" title="' + fullLbl + '">' + (ui.coachFull ? ic(P.collapse, 19, 1.5) : ic(P.expand, 19, 1.5)) + '</button>' +
-        (S.chat.length ? '<button class="icon-btn" style="background:rgba(251,245,239,.1);color:var(--on-strong)" data-a="coachClear" aria-label="ניקוי השיחה" title="ניקוי השיחה">' + ic(P.trash, 18, 2) + '</button>' : '') +
+        (S.chat.length ? '<button class="icon-btn" style="background:rgba(251,245,239,.1);color:var(--on-strong)" data-a="coachClear" aria-label="שיחה חדשה" title="שיחה חדשה">' + ic(P.newChat, 19, 1.9) + '</button>' : '') +
       '</span>' +
     '</div>' +
     (S.chat.length || ui.busy ? '<div class="msgs" id="msgs">' + msgs + '</div>' : '') +
@@ -1002,7 +1003,7 @@ function vLayer() {
     html += '<div class="cf" role="alertdialog" aria-modal="true" aria-labelledby="cftitle">' +
       '<button class="scrim" data-a="confirmCancel" aria-label="ביטול"></button>' +
       '<div class="box">' +
-        '<span class="ico">' + ic(P.trash, 26, 2.2) + '</span>' +
+        '<span class="ico">' + ic(P[cf.icon] || P.trash, 26, 2.2) + '</span>' +
         '<h2 id="cftitle">' + esc(cf.title) + '</h2>' +
         '<p>' + esc(cf.text) + '</p>' +
         '<div class="acts">' +
@@ -1047,7 +1048,7 @@ function render() {
 /* ---------- styled confirm ---------- */
 function askConfirm(opts) {
   return new Promise(function (resolve) {
-    ui.confirm = { title: opts.title, text: opts.text, ok: opts.ok || 'אישור', resolve: resolve };
+    ui.confirm = { title: opts.title, text: opts.text, ok: opts.ok || 'אישור', icon: opts.icon || 'trash', resolve: resolve };
     render();
   });
 }
@@ -1338,9 +1339,9 @@ document.addEventListener('click', function (ev) {
     case 'coachChip': askCoach(b.dataset.q); break;
     case 'coachFull': ui.coachFull = !ui.coachFull; ui.coachFullAnim = true; render(); break;
     case 'coachClear':
-      askConfirm({ title: 'ניקוי השיחה', text: 'למחוק את כל השיחה עם המאמן?', ok: 'ניקוי' }).then(function (yes) {
+      askConfirm({ title: 'שיחה חדשה', text: 'לפתוח שיחה חדשה עם המאמן? השיחה הנוכחית תימחק.', ok: 'שיחה חדשה', icon: 'newChat' }).then(function (yes) {
         if (!yes) return;
-        S.chat = []; commit(); toast('השיחה נוקתה');
+        S.chat = []; commit(); toast('נפתחה שיחה חדשה');
       });
       break;
     case 'coachAdd':
